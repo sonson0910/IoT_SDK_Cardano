@@ -1,0 +1,23 @@
+# Examples CMakeLists.txt for Cardano IoT SDK
+
+# Basic device registration example
+add_executable(device_registration
+    device_registration.cpp
+)
+target_link_libraries(device_registration cardano_iot_sdk)
+
+# Smart contract integration example
+add_executable(smart_contract_demo
+    smart_contract_demo.cpp
+)
+target_link_libraries(smart_contract_demo cardano_iot_sdk)
+
+# Energy monitoring example
+add_executable(energy_monitoring
+    energy_monitoring.cpp
+)
+target_link_libraries(energy_monitoring cardano_iot_sdk)
+
+# Copy example configs
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configs/example_config.json 
+               ${CMAKE_CURRENT_BINARY_DIR}/example_config.json COPYONLY)

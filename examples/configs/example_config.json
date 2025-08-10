@@ -1,0 +1,62 @@
+{
+    "network": {
+        "type": "testnet",
+        "node_socket_path": "/tmp/cardano-node.socket",
+        "node_config_path": "/etc/cardano/testnet-config.json",
+        "magic_number": "1097911063",
+        "relay_nodes": [
+            "relays-new.cardano-testnet.iohkdev.io:3001"
+        ]
+    },
+    "security": {
+        "enable_encryption": true,
+        "auth_method": "ed25519",
+        "certificate_validation": true,
+        "challenge_expiry_seconds": 300,
+        "max_auth_attempts": 3
+    },
+    "performance": {
+        "max_devices": 1000,
+        "transaction_timeout_ms": 30000,
+        "enable_caching": true,
+        "cache_size_mb": 128,
+        "worker_threads": 4
+    },
+    "logging": {
+        "level": "INFO",
+        "file_path": "/var/log/cardano-iot.log",
+        "enable_console": true,
+        "max_file_size_mb": 100,
+        "max_files": 5
+    },
+    "data_provenance": {
+        "enable_tracking": true,
+        "retention_days": 365,
+        "verification_frequency_hours": 24,
+        "merkle_tree_depth": 8
+    },
+    "energy_management": {
+        "enable_power_optimization": true,
+        "low_power_threshold": 0.2,
+        "battery_check_interval_minutes": 15,
+        "sleep_mode_timeout_minutes": 30
+    },
+    "p2p_network": {
+        "enable_p2p": true,
+        "listen_port": 8080,
+        "max_connections": 50,
+        "heartbeat_interval_seconds": 30,
+        "discovery_interval_seconds": 60
+    },
+    "smart_contracts": {
+        "enable_execution": true,
+        "plutus_version": "v2",
+        "max_execution_time_ms": 10000,
+        "collateral_amount_lovelace": 5000000
+    },
+    "wallet": {
+        "mnemonic_words": 24,
+        "derivation_path": "m/1852'/1815'/0'",
+        "address_gap_limit": 20
+    }
+}

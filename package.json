@@ -1,0 +1,54 @@
+{
+  "name": "cardano-iot-sdk",
+  "version": "1.0.0",
+  "description": "Comprehensive C++ SDK for integrating IoT devices with the Cardano blockchain ecosystem",
+  "keywords": [
+    "cardano",
+    "iot",
+    "blockchain",
+    "cpp",
+    "sdk",
+    "smart-contracts",
+    "cryptography"
+  ],
+  "author": "Cardano IoT SDK Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cardano-iot/sdk.git"
+  },
+  "homepage": "https://cardano-iot.org",
+  "bugs": {
+    "url": "https://github.com/cardano-iot/sdk/issues"
+  },
+  "scripts": {
+    "build": "mkdir -p build && cd build && cmake .. && make",
+    "build:release": "mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make",
+    "build:debug": "mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make",
+    "test": "cd build && ctest",
+    "clean": "rm -rf build",
+    "format": "find src include examples -name '*.cpp' -o -name '*.h' | xargs clang-format -i",
+    "lint": "find src include examples -name '*.cpp' -o -name '*.h' | xargs cpplint",
+    "docs": "doxygen Doxyfile",
+    "install": "cd build && sudo make install"
+  },
+  "devDependencies": {
+    "clang-format": "^15.0.0",
+    "cpplint": "^1.6.0",
+    "doxygen": "^1.9.0"
+  },
+  "engines": {
+    "cmake": ">=3.16",
+    "gcc": ">=8.0",
+    "clang": ">=9.0"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}
