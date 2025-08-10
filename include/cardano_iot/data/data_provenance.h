@@ -53,7 +53,7 @@ namespace cardano_iot
             std::string creator_id;
         };
 
-        using ProvenanceCallback = std::function<void(const ProvenanceEvent&)>;
+        using ProvenanceCallback = std::function<void(const ProvenanceEvent &)>;
 
         class DataProvenance
         {
@@ -65,26 +65,26 @@ namespace cardano_iot
             void shutdown();
 
             // Data asset management
-            std::string register_data_asset(const DataAsset& asset);
-            std::shared_ptr<DataAsset> get_data_asset(const std::string& asset_id) const;
+            std::string register_data_asset(const DataAsset &asset);
+            std::shared_ptr<DataAsset> get_data_asset(const std::string &asset_id) const;
             std::vector<DataAsset> list_data_assets() const;
 
             // Provenance tracking
-            std::string record_event(const ProvenanceEvent& event);
-            std::string record_data_creation(const std::string& data_id, const std::string& creator_id);
-            std::string record_data_access(const std::string& data_id, const std::string& accessor_id);
+            std::string record_event(const ProvenanceEvent &event);
+            std::string record_data_creation(const std::string &data_id, const std::string &creator_id);
+            std::string record_data_access(const std::string &data_id, const std::string &accessor_id);
 
             // Provenance queries
-            std::vector<ProvenanceEvent> get_provenance_history(const std::string& data_id) const;
-            std::vector<ProvenanceEvent> query_events_by_actor(const std::string& actor_id) const;
+            std::vector<ProvenanceEvent> get_provenance_history(const std::string &data_id) const;
+            std::vector<ProvenanceEvent> query_events_by_actor(const std::string &actor_id) const;
 
             // Data integrity
-            std::vector<uint8_t> compute_data_hash(const std::vector<uint8_t>& data) const;
-            bool verify_data_integrity(const std::string& asset_id, const std::vector<uint8_t>& current_data) const;
+            std::vector<uint8_t> compute_data_hash(const std::vector<uint8_t> &data) const;
+            bool verify_data_integrity(const std::string &asset_id, const std::vector<uint8_t> &current_data) const;
 
             // Blockchain integration
-            bool submit_to_blockchain(const std::string& event_id);
-            std::string get_blockchain_transaction(const std::string& event_id) const;
+            bool submit_to_blockchain(const std::string &event_id);
+            std::string get_blockchain_transaction(const std::string &event_id) const;
 
             // Statistics
             struct ProvenanceStats
