@@ -9,6 +9,7 @@
 #include "cardano_iot/cardano_iot.h"
 #include "cardano_iot/utils/logger.h"
 #include "cardano_iot/utils/config.h"
+#include "cardano_iot/network/network_utils.h"
 
 #include <memory>
 #include <mutex>
@@ -169,8 +170,15 @@ namespace cardano_iot
 
             pimpl_->initialized_ = true;
 
+            // Normalize network type to known enum + string representation
+            auto net = network_utils::parse_network(pimpl_->config_.network_type);
+            auto net_str = network_utils::network_to_string(net);
             utils::Logger::instance().log(utils::LogLevel::INFO, "CardanoIoTSDK",
-                                          "SDK initialized successfully for network: " + pimpl_->config_.network_type);
+                                          "SDK initialized successfully for network: " + net_str);
+
+            // Set default logger rotation (2MB, 5 backups)
+            utils::Logger::instance().set_max_file_size_bytes(2 * 1024 * 1024);
+            utils::Logger::instance().set_max_backup_files(5);
 
             return true;
         }
@@ -239,11 +247,36 @@ namespace cardano_iot
             {
                 device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::ACTUATOR_CONTROL);
             }
-            else if (cap == "smart_contract")
+            else if (cap == "smart_contract" || cap == "smart_contract_execution")
             {
                 device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::SMART_CONTRACT_EXECUTION);
             }
-            // Add more capability mappings as needed
+            else if (cap == "p2p" || cap == "peer_to_peer" || cap == "peer_to_peer_communication")
+            {
+                device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::PEER_TO_PEER_COMMUNICATION);
+            }
+            else if (cap == "energy_harvesting")
+            {
+                device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::ENERGY_HARVESTING);
+            }
+            else if (cap == "crypto" || cap == "cryptographic_operations")
+            {
+                device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::CRYPTOGRAPHIC_OPERATIONS);
+            }
+            else if (cap == "data_storage")
+            {
+                device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::DATA_STORAGE);
+            }
+            else if (cap == "firmware_update")
+            {
+                device.capabilities |= static_cast<uint32_t>(core::DeviceCapability::FIRMWARE_UPDATE);
+            }
+            else if (cap == "low_power")
+            {
+                // Not a capability flag; treat as desired operating mode
+                device.low_power_mode = true;
+            }
+            // Unknown capability strings are ignored intentionally
         }
 
         bool success = pimpl_->device_manager_->register_device(device);
@@ -531,7 +564,8 @@ namespace cardano_iot
 
         if (pimpl_->initialized_)
         {
-            status["network"] = pimpl_->config_.network_type;
+            auto net = network_utils::parse_network(pimpl_->config_.network_type);
+            status["network"] = network_utils::network_to_string(net);
             status["connected"] = "true";
             status["tip"] = "slot_12345678";
             status["peers"] = "15";

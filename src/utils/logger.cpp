@@ -27,6 +27,8 @@ namespace cardano_iot::utils
         std::string file_path_;
         std::ofstream log_file_;
         std::mutex log_mutex_;
+        size_t max_file_size_bytes_ = 5 * 1024 * 1024; // 5MB default
+        size_t max_backup_files_ = 3;                  // keep up to 3 backups
 
         std::string get_timestamp()
         {
@@ -104,6 +106,54 @@ namespace cardano_iot::utils
                 return "🤖";
             }
         }
+
+        void rotate_if_needed_unlocked()
+        {
+            if (!log_file_.is_open() || file_path_.empty())
+            {
+                return;
+            }
+            try
+            {
+                log_file_.flush();
+                std::ifstream in(file_path_, std::ios::binary | std::ios::ate);
+                if (!in.is_open())
+                    return;
+                auto size = static_cast<size_t>(in.tellg());
+                in.close();
+                if (size < max_file_size_bytes_)
+                    return;
+
+                // Close current file
+                log_file_.close();
+
+                // Delete oldest backup
+                if (max_backup_files_ > 0)
+                {
+                    std::string oldest = file_path_ + "." + std::to_string(max_backup_files_);
+                    std::remove(oldest.c_str());
+                    // Shift others (careful with size_t underflow)
+                    for (size_t i = (max_backup_files_ >= 2 ? max_backup_files_ - 1 : 0); i >= 1; --i)
+                    {
+                        std::string from = file_path_ + "." + std::to_string(i);
+                        std::string to = file_path_ + "." + std::to_string(i + 1);
+                        std::rename(from.c_str(), to.c_str());
+                        if (i == 1)
+                            break; // avoid size_t underflow
+                    }
+                    // Current -> .1
+                    std::string first = file_path_ + ".1";
+                    std::rename(file_path_.c_str(), first.c_str());
+                }
+
+                // Reopen file
+                log_file_.open(file_path_, std::ios::app);
+            }
+            catch (...)
+            {
+                // swallow rotation errors
+            }
+        }
     };
 
     Logger &Logger::instance()
@@ -155,6 +205,7 @@ namespace cardano_iot::utils
         {
             pimpl_->log_file_ << log_line << std::endl;
             pimpl_->log_file_.flush();
+            pimpl_->rotate_if_needed_unlocked();
         }
     }
 
@@ -197,6 +248,24 @@ namespace cardano_iot::utils
             {
                 std::cerr << "Failed to open log file: " << path << std::endl;
             }
+        }
+    }
+
+    void Logger::set_max_file_size_bytes(size_t bytes)
+    {
+        if (pimpl_)
+        {
+            std::lock_guard<std::mutex> lock(pimpl_->log_mutex_);
+            pimpl_->max_file_size_bytes_ = bytes;
+        }
+    }
+
+    void Logger::set_max_backup_files(size_t count)
+    {
+        if (pimpl_)
+        {
+            std::lock_guard<std::mutex> lock(pimpl_->log_mutex_);
+            pimpl_->max_backup_files_ = count;
         }
     }
 

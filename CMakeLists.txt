@@ -34,6 +34,8 @@ set(SOURCES
     src/security/authentication.cpp
     src/security/encryption.cpp
     src/data/data_provenance.cpp
+    src/identity/did.cpp
+    src/security/attestation.cpp
 )
 
 # Headers
@@ -51,6 +53,9 @@ set(HEADERS
     include/cardano_iot/security/encryption.h
     include/cardano_iot/data/data_provenance.h
     include/cardano_iot/cardano_iot.h
+    include/cardano_iot/network/network_utils.h
+    include/cardano_iot/identity/did.h
+    include/cardano_iot/security/attestation.h
 )
 
 # Create main library

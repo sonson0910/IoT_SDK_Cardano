@@ -8,6 +8,7 @@
 
 #include "cardano_iot/core/device_manager.h"
 #include "cardano_iot/utils/logger.h"
+#include "cardano_iot/network/network_utils.h"
 #include "cardano_iot/security/authentication.h"
 
 #include <nlohmann/json.hpp>
@@ -57,14 +58,13 @@ namespace cardano_iot::core
 
         std::string generate_device_address(const std::string &public_key)
         {
-            // Simplified address generation - in real implementation would use Cardano's
-            // address generation logic with proper encoding
+            // Simplified address generation using network-aware prefix
             std::hash<std::string> hasher;
             auto hash = hasher(public_key);
-
+            auto net = network::Network::TESTNET; // default; DeviceManager doesn't track network, default to testnet
             std::stringstream ss;
-            ss << "addr_test1" << std::hex << hash;
-            return ss.str().substr(0, 64); // Truncate to reasonable length
+            ss << network_utils::address_prefix(net, false) << std::hex << hash;
+            return ss.str().substr(0, 64);
         }
     };
 

@@ -1,5 +1,6 @@
 #include "cardano_iot/core/transaction_manager.h"
 #include "cardano_iot/utils/logger.h"
+#include "cardano_iot/network/network_utils.h"
 
 #include <chrono>
 #include <sstream>
@@ -62,7 +63,8 @@ namespace cardano_iot
             // Generate mock address
             std::string generate_mock_address(const std::string &public_key, const std::string &network)
             {
-                std::string prefix = (network == "mainnet") ? "addr1" : "addr_test1";
+                auto net = network_utils::parse_network(network);
+                std::string prefix = network_utils::address_prefix(net, false);
 
                 // Simplified address generation
                 std::hash<std::string> hasher;
@@ -765,6 +767,11 @@ namespace cardano_iot
                 std::lock_guard<std::mutex> stats_lock(pimpl_->stats_mutex_);
                 pimpl_->stats_.total_transactions++;
                 pimpl_->stats_.pending_transactions++;
+                pimpl_->stats_.total_fees_paid += transaction.fee;
+                pimpl_->stats_.avg_fee_per_transaction =
+                    pimpl_->stats_.total_transactions > 0
+                        ? static_cast<double>(pimpl_->stats_.total_fees_paid) / static_cast<double>(pimpl_->stats_.total_transactions)
+                        : 0.0;
 
                 utils::Logger::instance().log(utils::LogLevel::INFO, "TransactionManager",
                                               "Transaction submitted successfully: " + transaction.tx_id);
@@ -822,6 +829,39 @@ namespace cardano_iot
                         it->second->confirmed_timestamp = std::chrono::duration_cast<std::chrono::seconds>(
                                                               std::chrono::system_clock::now().time_since_epoch())
                                                               .count();
+
+                        // Update statistics on confirmation
+                        {
+                            std::lock_guard<std::mutex> stats_lock(pimpl_->stats_mutex_);
+                            if (pimpl_->stats_.pending_transactions > 0)
+                            {
+                                pimpl_->stats_.pending_transactions--;
+                            }
+                            pimpl_->stats_.confirmed_transactions++;
+                            // confirmation time
+                            if (it->second->submitted_timestamp > 0 && it->second->confirmed_timestamp > 0)
+                            {
+                                double conf_time = static_cast<double>(it->second->confirmed_timestamp - it->second->submitted_timestamp);
+                                // simple moving average
+                                if (pimpl_->stats_.confirmed_transactions > 0)
+                                {
+                                    double prev_avg = pimpl_->stats_.avg_confirmation_time_seconds;
+                                    double n = static_cast<double>(pimpl_->stats_.confirmed_transactions);
+                                    pimpl_->stats_.avg_confirmation_time_seconds = prev_avg + (conf_time - prev_avg) / n;
+                                }
+                                else
+                                {
+                                    pimpl_->stats_.avg_confirmation_time_seconds = conf_time;
+                                }
+                            }
+                            // total volume (sum of output lovelace excluding change is complex; approximate by sum outputs)
+                            uint64_t volume = 0;
+                            for (const auto &out : it->second->outputs)
+                            {
+                                volume += out.amount_lovelace;
+                            }
+                            pimpl_->stats_.total_volume_lovelace += volume;
+                        }
                     }
                 }
                 return it->second->status;

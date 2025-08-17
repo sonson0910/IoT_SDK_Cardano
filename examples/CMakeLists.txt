@@ -36,6 +36,12 @@ add_executable(data_provenance_demo
 )
 target_link_libraries(data_provenance_demo cardano_iot_sdk)
 
+# DID + Attestation example
+add_executable(identity_attestation_demo
+    identity_attestation_demo.cpp
+)
+target_link_libraries(identity_attestation_demo cardano_iot_sdk)
+
 # Copy example configs
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configs/example_config.json 
                ${CMAKE_CURRENT_BINARY_DIR}/example_config.json COPYONLY)

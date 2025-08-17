@@ -74,8 +74,8 @@ namespace cardano_iot
         // Fee calculation parameters
         struct FeeParameters
         {
-            uint64_t min_fee_a = 44;           // Linear fee parameter
-            uint64_t min_fee_b = 155381;       // Linear fee parameter
+            uint64_t min_fee_a = 155381;       // Linear fee parameter (constant term)
+            uint64_t min_fee_b = 44;           // Linear fee parameter (per-byte term)
             uint64_t max_tx_size = 16384;      // Maximum transaction size
             uint64_t key_deposit = 2000000;    // Key deposit (2 ADA)
             uint64_t pool_deposit = 500000000; // Pool deposit (500 ADA)

@@ -128,7 +128,25 @@ namespace cardano_iot
 
             pimpl_->initialized_ = true;
 
-            std::string network_name = (network == Network::MAINNET) ? "mainnet" : "testnet";
+            std::string network_name;
+            switch (network)
+            {
+            case Network::MAINNET:
+                network_name = "mainnet";
+                break;
+            case Network::TESTNET:
+                network_name = "testnet";
+                break;
+            case Network::PREPROD:
+                network_name = "preprod";
+                break;
+            case Network::PREVIEW:
+                network_name = "preview";
+                break;
+            case Network::LOCAL:
+                network_name = "local";
+                break;
+            }
             utils::Logger::instance().log(utils::LogLevel::INFO, "CardanoClient",
                                           "Cardano client initialized for network: " + network_name);
             return true;
@@ -136,15 +154,25 @@ namespace cardano_iot
 
         void CardanoClient::shutdown()
         {
-            std::lock_guard<std::mutex> lock(pimpl_->client_mutex_);
+            // Avoid deadlock by not calling disconnect() while holding client_mutex_
+            bool was_initialized = false;
+            {
+                std::lock_guard<std::mutex> lock(pimpl_->client_mutex_);
+                was_initialized = pimpl_->initialized_;
+            }
 
-            if (!pimpl_->initialized_)
+            if (!was_initialized)
             {
                 return;
             }
 
+            // Safe to call without holding mutex (disconnect acquires it internally)
             disconnect();
-            pimpl_->initialized_ = false;
+
+            {
+                std::lock_guard<std::mutex> lock(pimpl_->client_mutex_);
+                pimpl_->initialized_ = false;
+            }
 
             utils::Logger::instance().log(utils::LogLevel::INFO, "CardanoClient",
                                           "Cardano client shutdown");
@@ -230,7 +258,24 @@ namespace cardano_iot
 
             NodeInfo info;
             info.version = pimpl_->mock_node_version_;
-            info.network = (pimpl_->network_ == Network::MAINNET) ? "mainnet" : "testnet";
+            switch (pimpl_->network_)
+            {
+            case Network::MAINNET:
+                info.network = "mainnet";
+                break;
+            case Network::TESTNET:
+                info.network = "testnet";
+                break;
+            case Network::PREPROD:
+                info.network = "preprod";
+                break;
+            case Network::PREVIEW:
+                info.network = "preview";
+                break;
+            case Network::LOCAL:
+                info.network = "local";
+                break;
+            }
             info.slot = pimpl_->mock_current_slot_;
             info.epoch = pimpl_->mock_current_epoch_;
             info.sync_progress = pimpl_->mock_sync_progress_;

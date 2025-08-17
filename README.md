@@ -1,6 +1,7 @@
 # Cardano IoT SDK 🚀
 
-![Cardano IoT Banner](docs/assets/banner.png)
+<!-- Banner temporarily disabled (asset missing). Uncomment when available. -->
+<!-- ![Cardano IoT Banner](docs/assets/banner.png) -->
 
 **A comprehensive C++ SDK for integrating IoT devices with the Cardano blockchain ecosystem.**
 
@@ -103,9 +104,12 @@ int main() {
     device.device_id = "sensor_001";
     device.device_type = "temperature_sensor";
     device.manufacturer = "ACME Corp";
-    device.capabilities = {"sensor_data", "low_power"};
+    device.public_key = "ed25519_pk_0123456789abcdef..."; // required
+    device.capabilities = {"sensor_data"}; // optional: "low_power" sets low_power_mode
     
-    sdk.register_device(device);
+    if (!sdk.register_device(device)) {
+        return 1; // registration failed (e.g., missing public_key)
+    }
     
     // Submit sensor data
     CardanoIoTSDK::IoTData data;
@@ -121,6 +125,9 @@ int main() {
 }
 ```
 
+> Note: Current blockchain/network functionality is mocked for demos/tests.
+> Real node integration (Ogmios/Kupo/cardano-node) is planned.
+
 ## 📚 Documentation
 
 ### API Reference
@@ -132,14 +139,14 @@ int main() {
 - [Network Operations](docs/api/network.md)
 - [Energy Management](docs/api/energy.md)
 
-### Guides
+### Guides (coming soon)
 
-- [Getting Started](docs/guides/getting-started.md)
-- [Device Registration](docs/guides/device-registration.md)
-- [Data Submission](docs/guides/data-submission.md)
-- [Smart Contract Development](docs/guides/smart-contracts.md)
-- [Security Best Practices](docs/guides/security.md)
-- [Deployment Guide](docs/guides/deployment.md)
+- Getting Started
+- Device Registration
+- Data Submission
+- Smart Contract Development
+- Security Best Practices
+- Deployment Guide
 
 ### Examples
 

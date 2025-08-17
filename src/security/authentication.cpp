@@ -337,74 +337,76 @@ namespace cardano_iot
                 return result;
             }
 
-            std::lock_guard<std::mutex> lock(pimpl_->auth_mutex_);
-
-            // Check if device is locked
-            if (pimpl_->is_device_locked(device_id))
-            {
-                result.status = AuthStatus::LOCKED;
-                result.error_message = "Device is locked due to too many failed attempts";
-                pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::LOCKED, result.error_message);
-                return result;
-            }
-
-            // Find device credentials
-            auto it = pimpl_->device_credentials_.find(device_id);
-            if (it == pimpl_->device_credentials_.end())
-            {
-                result.status = AuthStatus::FAILED;
-                result.error_message = "Device not registered";
-                pimpl_->record_failed_attempt(device_id);
-                pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::FAILED, result.error_message);
-                return result;
-            }
-
-            const auto &stored_credentials = it->second;
-
-            // Check credential expiry
-            auto now = std::chrono::duration_cast<std::chrono::seconds>(
-                           std::chrono::system_clock::now().time_since_epoch())
-                           .count();
-            if (stored_credentials.expiry_timestamp > 0 && now > stored_credentials.expiry_timestamp)
-            {
-                result.status = AuthStatus::EXPIRED;
-                result.error_message = "Credentials have expired";
-                pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::EXPIRED, result.error_message);
-                return result;
-            }
-
-            // Verify credentials based on method
             bool auth_success = false;
-            switch (provided_credentials.method)
+            AuthCredentials stored_credentials{};
             {
-            case AuthMethod::PASSWORD:
-                auth_success = pimpl_->verify_password(stored_credentials.credential_data, provided_credentials.credential_data);
-                break;
+                std::lock_guard<std::mutex> lock(pimpl_->auth_mutex_);
 
-            case AuthMethod::PUBLIC_KEY:
-                auth_success = !stored_credentials.public_key.empty() &&
-                               stored_credentials.public_key == provided_credentials.public_key;
-                break;
+                // Check if device is locked
+                if (pimpl_->is_device_locked(device_id))
+                {
+                    result.status = AuthStatus::LOCKED;
+                    result.error_message = "Device is locked due to too many failed attempts";
+                    pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::LOCKED, result.error_message);
+                    return result;
+                }
 
-            case AuthMethod::TOKEN:
-                auth_success = validate_token(provided_credentials.identifier);
-                break;
+                // Find device credentials
+                auto it = pimpl_->device_credentials_.find(device_id);
+                if (it == pimpl_->device_credentials_.end())
+                {
+                    result.status = AuthStatus::FAILED;
+                    result.error_message = "Device not registered";
+                    pimpl_->record_failed_attempt(device_id);
+                    pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::FAILED, result.error_message);
+                    return result;
+                }
 
-            case AuthMethod::BIOMETRIC:
-                auth_success = pimpl_->verify_biometric_match(stored_credentials.credential_data, provided_credentials.credential_data);
-                break;
+                stored_credentials = it->second;
 
-            default:
-                auth_success = false;
-                break;
+                // Check credential expiry
+                auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                               std::chrono::system_clock::now().time_since_epoch())
+                               .count();
+                if (stored_credentials.expiry_timestamp > 0 && now > stored_credentials.expiry_timestamp)
+                {
+                    result.status = AuthStatus::EXPIRED;
+                    result.error_message = "Credentials have expired";
+                    pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::EXPIRED, result.error_message);
+                    return result;
+                }
+
+                // Verify credentials based on method
+                switch (provided_credentials.method)
+                {
+                case AuthMethod::PASSWORD:
+                    auth_success = pimpl_->verify_password(stored_credentials.credential_data, provided_credentials.credential_data);
+                    break;
+                case AuthMethod::PUBLIC_KEY:
+                    auth_success = !stored_credentials.public_key.empty() &&
+                                   stored_credentials.public_key == provided_credentials.public_key;
+                    break;
+                case AuthMethod::TOKEN:
+                    auth_success = validate_token(provided_credentials.identifier);
+                    break;
+                case AuthMethod::BIOMETRIC:
+                    auth_success = pimpl_->verify_biometric_match(stored_credentials.credential_data, provided_credentials.credential_data);
+                    break;
+                default:
+                    auth_success = false;
+                    break;
+                }
             }
 
             if (auth_success)
             {
                 result.status = AuthStatus::SUCCESS;
-                pimpl_->clear_failed_attempts(device_id);
+                {
+                    std::lock_guard<std::mutex> lock(pimpl_->auth_mutex_);
+                    pimpl_->clear_failed_attempts(device_id);
+                }
 
-                // Create session
+                // Create session (does its own locking)
                 auto session = create_session(device_id);
                 result.session_id = session.session_id;
                 result.token = session.token;
@@ -419,7 +421,10 @@ namespace cardano_iot
             {
                 result.status = AuthStatus::FAILED;
                 result.error_message = "Invalid credentials";
-                pimpl_->record_failed_attempt(device_id);
+                {
+                    std::lock_guard<std::mutex> lock(pimpl_->auth_mutex_);
+                    pimpl_->record_failed_attempt(device_id);
+                }
                 pimpl_->log_auth_event(device_id, provided_credentials.method, AuthStatus::FAILED, result.error_message);
 
                 utils::Logger::instance().log(utils::LogLevel::WARNING, "Authentication",
@@ -491,6 +496,9 @@ namespace cardano_iot
                 return {};
             }
 
+            // Generate token first (locks internally) to avoid nested locking
+            std::string token = generate_access_token(device_id);
+
             std::lock_guard<std::mutex> lock(pimpl_->auth_mutex_);
 
             AuthSession session;
@@ -504,7 +512,7 @@ namespace cardano_iot
             session.last_activity_timestamp = session.created_timestamp;
             session.expiry_timestamp = session.created_timestamp + pimpl_->policy_.session_timeout_seconds;
             session.permissions = permissions.empty() ? std::vector<std::string>{"read", "write"} : permissions;
-            session.token = generate_access_token(device_id);
+            session.token = token;
 
             pimpl_->active_sessions_[session.session_id] = session;
 

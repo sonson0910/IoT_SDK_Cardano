@@ -35,6 +35,10 @@ namespace cardano_iot::utils
         void enable_console(bool enable);
         void set_file_path(const std::string &path);
 
+        // Log rotation settings
+        void set_max_file_size_bytes(size_t bytes);
+        void set_max_backup_files(size_t count);
+
     private:
         Logger() = default;
         class Impl;
